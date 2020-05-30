@@ -124,23 +124,23 @@ class BopomoEmbeddingModel(torch.nn.Module):
 #if __name__ == '__main__':
     #train_dataset = TextDataset('data-aishell-train.txt')
     #dev_dataset = TextDataset('data-aishell-dev.txt')
-bpmf_tokenizer = BopomoTokenizer('bopomo_char_file')
+bpmf_tokenizer = BopomoTokenizer('z2c_vocab')
 word_tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-chinese')
 vocab_size = bpmf_tokenizer.vocab_size
 hidden_size = 768 // 4
 bpm_model = BopomoEmbeddingModel(vocab_size, hidden_size, scale=4)
-bpm_model.cuda()
-bpm_model.load_state_dict(torch.load("bpm_model.ckpt"))
+#bpm_model.cuda()
+bpm_model.load_state_dict(torch.load("bpm_model.ckpt", map_location=torch.device('cpu')))
 # tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-chinese')
 model = transformers.BertForMaskedLM.from_pretrained('./cbert')
-model.cuda()
-model.load_state_dict(torch.load("model.ckpt"))
+#model.cuda()
+model.load_state_dict(torch.load("model.ckpt", map_location=torch.device('cpu')))
 #while True:
 #    inputs = input("BOPOMOFO>>> ").split(' ')
     #inputs = "ㄓㄜˋ ㄐㄧㄢˋ ㄕˋ ㄑㄧㄥˊ ㄐㄧㄡˋ ㄓㄜˋ ㄧㄤˋ ㄅㄚ˙".split(' ')
 def z2c(inputs):
-    inputs = torch.tensor(bpmf_tokenizer.convert_tokens_to_ids(inputs)).unsqueeze(0).cuda()
-    mask = torch.ones(inputs.shape[0], inputs.shape[1], dtype=torch.uint8).cuda()
+    inputs = torch.tensor(bpmf_tokenizer.convert_tokens_to_ids(inputs.split(' '))).unsqueeze(0)#.cuda()
+    mask = torch.ones(inputs.shape[0], inputs.shape[1], dtype=torch.uint8)#.cuda()
     allinputs = {"inputs_embeds": bpm_model(inputs), "attention_mask": mask}
     outputs = model(**allinputs)[0]
     pred = outputs.argmax(-1).tolist()[0]

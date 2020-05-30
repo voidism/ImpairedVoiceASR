@@ -70,12 +70,17 @@ solver = Solver(config, paras, mode)
 #solver.load_data()
 solver.set_model()
 
+from z2c import z2c
+
 app = Flask(__name__)
 
 @app.route("/recognize", methods=["POST"])
 def recognize():
     f = request.files["file"]
     f.save("test.wav")
-    return solver.recognize("test.wav")
+    output = solver.recognize("test.wav")
+    #return output
+    text = z2c(output)
+    return output+'|'+text
 
 app.run("0.0.0.0", port=1234, debug=True)
