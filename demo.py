@@ -67,7 +67,7 @@ mode = 'test'
 
 
 solver = Solver(config, paras, mode)
-solver.load_data()
+#solver.load_data()
 solver.set_model()
 
 app = Flask(__name__)
@@ -78,4 +78,4 @@ def recognize():
     f.save("test.wav")
     return solver.recognize("test.wav")
 
-app.run("0.0.0.0", port=80, debug=True)
+app.run("0.0.0.0", port=1234, debug=True)

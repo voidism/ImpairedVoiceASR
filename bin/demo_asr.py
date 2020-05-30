@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from src.solver import BaseSolver
 from src.asr import ASR
 from src.decode import BeamDecoder
-from src.data import load_dataset
+from src.data import load_dataset, load_text_encoder
 from src.online import Datadealer
 
 
@@ -25,6 +25,7 @@ class Solver(BaseSolver):
         # The follow attribute should be identical to training config
         self.config['data']['audio'] = self.src_config['data']['audio']
         self.config['data']['text'] = self.src_config['data']['text']
+        self.tokenizer = load_text_encoder(**self.config['data']['text'])
         self.config['model'] = self.src_config['model']
 
         # Output file
@@ -50,6 +51,8 @@ class Solver(BaseSolver):
     def set_model(self):
         ''' Setup ASR model '''
         # Model
+        self.feat_dim = 120
+        self.vocab_size = 46 
         init_adadelta = True
         self.model = ASR(self.feat_dim, self.vocab_size, init_adadelta, 
                          **self.config['model'])
@@ -106,7 +109,8 @@ class Solver(BaseSolver):
             hyp_seqs = [hyp.outIndex for hyp in hyps]
             hyp_txts = [self.tokenizer.decode(hyp, ignore_repeat=self.ctc) for hyp in hyp_seqs]
             return hyp_txts[0]
-        except:
+        except Exception as e:
+            print(e)
             return "Invalid file"
 
 
