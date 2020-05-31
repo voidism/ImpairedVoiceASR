@@ -5,6 +5,7 @@ import torch
 import argparse
 import numpy as np
 from flask import Flask, request
+from flask_cors import CORS
 
 # For reproducibility, comment these may speed up training
 torch.backends.cudnn.deterministic = True
@@ -73,6 +74,7 @@ solver.set_model()
 from z2c import z2c
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/recognize", methods=["POST"])
 def recognize():
