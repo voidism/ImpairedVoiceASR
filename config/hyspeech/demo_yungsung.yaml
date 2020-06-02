@@ -1,6 +1,6 @@
 # Most of the parameters will be imported from the training config
 src:
-  ckpt: 'ckpt/new_yungsung_sd0/best_att.pth' #'ckpt/good_model/common_voice_sd0/best_ctc.pth' #'ckpt/new_yungsung_sd0/best_att.pth'
+  ckpt: 'ckpt/yungsung_ctc.pth' #'ckpt/new_yungsung_sd0/best_att.pth' #'ckpt/good_model/common_voice_sd0/best_ctc.pth' #'ckpt/new_yungsung_sd0/best_att.pth'
   config: 'config/hyspeech/new_yungsung.yaml'
 data:
   corpus:
@@ -14,4 +14,4 @@ decode:
   lm_path: #'lm_bznsyp_sd0/best_ppx.pth' #'ckpt/lm_example_sd0/best_ppx.pth'
   lm_config: #'config/hyspeech/lm_bznsyp.yaml'
   lm_weight: 0.0
-  ctc_weight: 1.0
+  ctc_weight: 0.0

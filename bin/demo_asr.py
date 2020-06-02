@@ -111,6 +111,7 @@ class Solver(BaseSolver):
             return hyp_txts[0]
         except Exception as e:
             print(e)
+            app.logger.debug(e)
             return "Invalid file"
 
 

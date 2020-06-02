@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 from flask import Flask, request
 from flask_cors import CORS
-
+from io import BytesIO
 # For reproducibility, comment these may speed up training
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -76,13 +76,27 @@ from z2c import z2c
 app = Flask(__name__)
 CORS(app)
 
+
+@app.route("/helloworld", methods=["GET"])
+def helloworld():
+    return "Hello World!"
+
 @app.route("/recognize", methods=["POST"])
 def recognize():
-    f = request.files["file"]
-    f.save("test.wav")
+    #app.logger.debug(request.files)
+    if 'file' in request.files:
+        f = request.files["file"]
+        f.save("test.wav")
+    else:
+        myio = BytesIO()
+        myio.write(request.get_data())
+        with open('test.wav', "wb") as outfile:
+            outfile.write(myio.getbuffer())
+    
     output = solver.recognize("test.wav")
     #return output
     text = z2c(output)
+    app.logger.debug(text)
     return output+'|'+text
 
-app.run("0.0.0.0", port=1234, debug=True)
+app.run("0.0.0.0", port=1234, debug=True, ssl_context=('./server.crt', './server.key'))
