@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 import yaml
-import json
 import torch
 import argparse
 import numpy as np
-from flask import Flask, request, make_response, Response
-import requests
+from flask import Flask, request
 from flask_cors import CORS
+from io import BytesIO
 # For reproducibility, comment these may speed up training
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -17,8 +16,6 @@ parser = argparse.ArgumentParser(description='Training E2E asr.')
 parser.add_argument('--config', type=str, help='Path to experiment config.')
 parser.add_argument('--name', default=None, type=str, help='Name for logging.')
 parser.add_argument('--logdir', default='log/', type=str,
-                    help='Logging path.', required=False)
-parser.add_argument('--logfile', default='log/', type=str,
                     help='Logging path.', required=False)
 parser.add_argument('--ckpdir', default='ckpt/', type=str,
                     help='Checkpoint path.', required=False)
@@ -86,42 +83,32 @@ def helloworld():
 
 @app.route("/log", methods=["GET"])
 def log():
-    return open(paras.logfile, 'r').read()
-
-@app.route("/tts", methods=["GET"])
-def tts():
-    url = "http://140.112.29.182:777/tts"
-    text = request.args.get('text')
-    args = {"text": text}
-    r = requests.get(url, params=args)
-    #response = make_response()
-    #response.data = r.content
-    return Response(r.content, mimetype="audio/wav")
+    return open("log.flask5", 'r').read()
 
 @app.route("/finetune", methods=["POST"])
 def finetune():
-    body = json.loads(request.get_data().decode('UTF-8'))
-    filename = body["filename"]
-    fixed_text = body["text"]
+    filename = request.args["filename"]
+    fixed_text = request.args["text"]
     # TODO: finetune
-    return 'finetune!'
 
 @app.route("/recognize", methods=["POST"])
 def recognize():
-
-    app.logger.debug(request.files)
-    f = request.files["file"]
-    save_name = request.form["filename"]
-    f.save(save_name)
+    save_name = request.args['filename']
+    if 'file' in request.files:
+        app.logger.debug(request.files)
+        f = request.files["file"]
+        f.save(save_name)
+    else:
+        myio = BytesIO()
+        myio.write(request.get_data())
+        with open(save_name, "wb") as outfile:
+            outfile.write(myio.getbuffer())
     
     output = solver.recognize(save_name)
     app.logger.debug(output)
     #return output
     text = z2c(output)
     app.logger.debug(text)
-    return {
-        'result': output+'|'+text,
-        'filename': save_name
-    }
+    return output+'|'+text
 
 app.run("0.0.0.0", port=1234, debug=True, ssl_context=('./server.crt', './server.key'))

@@ -130,11 +130,11 @@ vocab_size = bpmf_tokenizer.vocab_size
 hidden_size = 768 // 4
 bpm_model = BopomoEmbeddingModel(vocab_size, hidden_size, scale=4)
 #bpm_model.cuda()
-bpm_model.load_state_dict(torch.load("bpm_model.ckpt", map_location=torch.device('cpu')))
+bpm_model.load_state_dict(torch.load("z2c_model/bpm_model.ckpt", map_location=torch.device('cpu')))
 # tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-chinese')
 model = transformers.BertForMaskedLM.from_pretrained('./cbert')
 #model.cuda()
-model.load_state_dict(torch.load("model.ckpt", map_location=torch.device('cpu')))
+model.load_state_dict(torch.load("z2c_model/model.ckpt", map_location=torch.device('cpu')))
 #while True:
 #    inputs = input("BOPOMOFO>>> ").split(' ')
     #inputs = "ㄓㄜˋ ㄐㄧㄢˋ ㄕˋ ㄑㄧㄥˊ ㄐㄧㄡˋ ㄓㄜˋ ㄧㄤˋ ㄅㄚ˙".split(' ')
