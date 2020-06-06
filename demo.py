@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
+import time
 import yaml
 import json
 import torch
+import glob
+import shutil
 import argparse
 import numpy as np
+import os
 from flask import Flask, request, make_response, Response
+from flask import after_this_request
 import requests
 from flask_cors import CORS
 # For reproducibility, comment these may speed up training
@@ -94,8 +99,6 @@ def tts():
     text = request.args.get('text')
     args = {"text": text}
     r = requests.get(url, params=args)
-    #response = make_response()
-    #response.data = r.content
     return Response(r.content, mimetype="audio/wav")
 
 @app.route("/finetune", methods=["POST"])
@@ -104,7 +107,10 @@ def finetune():
     filename = body["filename"]
     fixed_text = body["text"]
     # TODO: finetune
+    shutil.move(filename, "finetune/"+filename)
+    _ = os.popen("echo '%s %s' >> finetune/bopomo.trans.txt"%(filename.split('.')[0], fixed_text))
     return 'finetune!'
+
 
 @app.route("/recognize", methods=["POST"])
 def recognize():
@@ -119,6 +125,19 @@ def recognize():
     #return output
     text = z2c(output)
     app.logger.debug(text)
+    # Clean old files
+    @after_this_request
+    def remove_file(response):
+        for fname in glob.glob("*.wav"):
+            try:
+                timestamp = fname.split('.')[0][:-3]
+                nowtstamp = time.strftime("%m%d%H%M%S")
+                if int(nowtstamp) - int(timestamp) > 1000:
+                    os.remove(fname)
+                    print("Remove old file %s"%fname, flush=True)
+            except:
+                print("Not to remove %s"%fname, flush=True)
+        return response
     return {
         'result': output+'|'+text,
         'filename': save_name
