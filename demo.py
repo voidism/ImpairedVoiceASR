@@ -11,6 +11,7 @@ import numpy as np
 import os
 from flask import Flask, request, make_response, Response
 from flask import after_this_request
+from threading import Thread
 import requests
 from flask_cors import CORS
 # For reproducibility, comment these may speed up training
@@ -76,7 +77,8 @@ mode = 'test'
 
 
 solver = Solver(config, paras, mode)
-#solver.load_data()
+# load data for finetune
+solver.load_data(batch_size=7)
 solver.set_model()
 
 from z2c import z2c
@@ -84,6 +86,31 @@ from z2c import z2c
 app = Flask(__name__)
 CORS(app)
 
+class Finetune(Thread):
+    def __init__(self, filename, fixed_text, solver):
+        Thread.__init__(self)
+        self.filename = filename
+        self.fixed_text = fixed_text
+        self.solver = solver
+
+    def run(self):
+        self.solver.finetune(self.filename, self.fixed_text, max_step=3)
+
+class Clean(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+
+    def run(self):
+        for fname in glob.glob("*.wav"):
+            try:
+                timestamp = fname.split('.')[0][:-3]
+                nowtstamp = time.strftime("%m%d%H%M%S")
+                if int(nowtstamp) - int(timestamp) > 1000:
+                    os.remove(fname)
+                    print("Remove old file %s"%fname, flush=True)
+            except:
+                print("Not to remove %s" % fname, flush=True)
+        return
 
 @app.route("/helloworld", methods=["GET"])
 def helloworld():
@@ -106,9 +133,13 @@ def finetune():
     body = json.loads(request.get_data().decode('UTF-8'))
     filename = body["filename"]
     fixed_text = body["text"]
+    if '|' in fixed_text:
+        fixed_text = fixed_text.split('|')[0]
     # TODO: finetune
-    shutil.move(filename, "finetune/"+filename)
+    shutil.move(filename, "finetune/new/"+filename)
     _ = os.popen("echo '%s %s' >> finetune/bopomo.trans.txt"%(filename.split('.')[0], fixed_text))
+    ft = Finetune("finetune/new/" + filename, fixed_text, solver)
+    ft.start()
     return 'finetune!'
 
 
@@ -126,18 +157,20 @@ def recognize():
     text = z2c(output)
     app.logger.debug(text)
     # Clean old files
-    @after_this_request
-    def remove_file(response):
-        for fname in glob.glob("*.wav"):
-            try:
-                timestamp = fname.split('.')[0][:-3]
-                nowtstamp = time.strftime("%m%d%H%M%S")
-                if int(nowtstamp) - int(timestamp) > 1000:
-                    os.remove(fname)
-                    print("Remove old file %s"%fname, flush=True)
-            except:
-                print("Not to remove %s"%fname, flush=True)
-        return response
+    clean = Clean()
+    clean.start()
+    # @after_this_request
+    # def remove_file(response):
+    #     for fname in glob.glob("*.wav"):
+    #         try:
+    #             timestamp = fname.split('.')[0][:-3]
+    #             nowtstamp = time.strftime("%m%d%H%M%S")
+    #             if int(nowtstamp) - int(timestamp) > 1000:
+    #                 os.remove(fname)
+    #                 print("Remove old file %s"%fname, flush=True)
+    #         except:
+    #             print("Not to remove %s"%fname, flush=True)
+    #     return response
     return {
         'result': output+'|'+text,
         'filename': save_name

@@ -10,7 +10,8 @@ REMOVE_TOP_N_TXT = 5000000
 # Default num. of threads used for loading LibriSpeech
 READ_FILE_THREADS = 4
 
-transcripts_file = open('/workspace/toolkits/End-to-end-ASR-Pytorch/data/Dysar/new_yungsung/bopomo.trans.txt').readlines()
+#transcripts_file = open('/workspace/toolkits/End-to-end-ASR-Pytorch/data/Dysar/new_yungsung/bopomo.trans.txt').readlines()
+transcripts_file = open('/home/ysc/speech/ImpairedVoiceASR/finetune/bopomo.trans.txt').readlines()
 transcripts = {}
 for line in transcripts_file:
     line = line.strip().split(' ')

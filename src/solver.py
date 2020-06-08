@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.option import default_hparas
 from src.util import human_format, Timer
-
+import pdb
 
 class BaseSolver():
     ''' 
@@ -121,6 +121,13 @@ class BaseSolver():
                     self.verbose('Load ckpt failed from {}, restarting at step {} (org:{}) (recorded {} = {:.2f} %)'.format(
                               self.paras.load, self.step, ckpt['global_step'], metric, score))
             else:
+                try:
+                    self.step = ckpt['global_step']
+                    self.optimizer.load_opt_state_dict(ckpt['optimizer'])
+                    self.verbose('Load step and optimizer for finetune!')
+                except:
+                    self.verbose('Step and optimizer failed to load')
+                    pdb.set_trace()
                 self.model.eval()
                 if self.emb_decoder is not None:
                     self.emb_decoder.eval()

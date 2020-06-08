@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
+import time
 import yaml
+import json
 import torch
+import glob
+import shutil
 import argparse
 import numpy as np
-from flask import Flask, request
+import os
+from flask import Flask, request, make_response, Response
+from flask import after_this_request
+import requests
 from flask_cors import CORS
-from io import BytesIO
 # For reproducibility, comment these may speed up training
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -16,6 +22,8 @@ parser = argparse.ArgumentParser(description='Training E2E asr.')
 parser.add_argument('--config', type=str, help='Path to experiment config.')
 parser.add_argument('--name', default=None, type=str, help='Name for logging.')
 parser.add_argument('--logdir', default='log/', type=str,
+                    help='Logging path.', required=False)
+parser.add_argument('--logfile', default='log/', type=str,
                     help='Logging path.', required=False)
 parser.add_argument('--ckpdir', default='ckpt/', type=str,
                     help='Checkpoint path.', required=False)
@@ -68,9 +76,9 @@ mode = 'test'
 
 
 solver = Solver(config, paras, mode)
-#solver.load_data()
+solver.load_data(batch_size=7)
 solver.set_model()
-
+'''
 from z2c import z2c
 
 app = Flask(__name__)
@@ -83,32 +91,57 @@ def helloworld():
 
 @app.route("/log", methods=["GET"])
 def log():
-    return open("log.flask5", 'r').read()
+    return open(paras.logfile, 'r').read()
+
+@app.route("/tts", methods=["GET"])
+def tts():
+    url = "http://140.112.29.182:777/tts"
+    text = request.args.get('text')
+    args = {"text": text}
+    r = requests.get(url, params=args)
+    return Response(r.content, mimetype="audio/wav")
 
 @app.route("/finetune", methods=["POST"])
 def finetune():
-    filename = request.args["filename"]
-    fixed_text = request.args["text"]
+    body = json.loads(request.get_data().decode('UTF-8'))
+    filename = body["filename"]
+    fixed_text = body["text"]
     # TODO: finetune
+    shutil.move(filename, "finetune/new/"+filename)
+    _ = os.popen("echo '%s %s' >> finetune/bopomo.trans.txt"%(filename.split('.')[0], fixed_text))
+    return 'finetune!'
+
 
 @app.route("/recognize", methods=["POST"])
 def recognize():
-    save_name = request.args['filename']
-    if 'file' in request.files:
-        app.logger.debug(request.files)
-        f = request.files["file"]
-        f.save(save_name)
-    else:
-        myio = BytesIO()
-        myio.write(request.get_data())
-        with open(save_name, "wb") as outfile:
-            outfile.write(myio.getbuffer())
+
+    app.logger.debug(request.files)
+    f = request.files["file"]
+    save_name = request.form["filename"]
+    f.save(save_name)
     
     output = solver.recognize(save_name)
     app.logger.debug(output)
     #return output
     text = z2c(output)
     app.logger.debug(text)
-    return output+'|'+text
+    # Clean old files
+    @after_this_request
+    def remove_file(response):
+        for fname in glob.glob("*.wav"):
+            try:
+                timestamp = fname.split('.')[0][:-3]
+                nowtstamp = time.strftime("%m%d%H%M%S")
+                if int(nowtstamp) - int(timestamp) > 1000:
+                    os.remove(fname)
+                    print("Remove old file %s"%fname, flush=True)
+            except:
+                print("Not to remove %s"%fname, flush=True)
+        return response
+    return {
+        'result': output+'|'+text,
+        'filename': save_name
+    }
 
 app.run("0.0.0.0", port=1234, debug=True, ssl_context=('./server.crt', './server.key'))
+'''
